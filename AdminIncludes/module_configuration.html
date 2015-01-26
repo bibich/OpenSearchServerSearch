@@ -2,7 +2,7 @@
     <div class="col-md-12 general-block-decorator">
         <div class="row">
             <div class="col-md-12 title title-without-tabs">
-                {intl d='opensearchserversearch.ai' l="OpenSearchServer Configuration" d="opensearchserversearch"}
+                {intl d='opensearchserversearch.ai' l="OpenSearchServer Configuration" d="opensearchserversearch.ai"}
             </div>
         </div>
 
@@ -57,14 +57,73 @@
                 </form>
                 {/form}
             </div>
-                        
+
+            <div>&nbsp;</div>
+
             <div class="col-md-12">
-                <h3>Actions</h3>
+                <h3>{intl d='opensearchserversearch.ai' l="Actions"}</h3>
                 <form action="{url path="/admin/module/OpenSearchServerSearch/actions/adminActions"}" method="post">
-                    <button type="submit" name="adminAction" value="indexAll" class="btn btn-warning">{intl l="Index all products" d="opensearchserversearch"}</button>
-                    <button type="submit" name="adminAction" value="deleteAll" class="btn btn-danger">{intl l="Delete all data from index" d="opensearchserversearch"}</button>
+                    <button type="submit" name="adminAction" value="indexAll" class="btn btn-warning">{intl l="Index all products" d="opensearchserversearch.ai"}</button>
+                    <button type="submit" name="adminAction" value="deleteAll" class="btn btn-danger">{intl l="Delete all data from index" d="opensearchserversearch.ai"}</button>
                 </form>
             </div>
+
+            <div>&nbsp;</div>
+
+            <div class="col-md-12">
+
+                <h3>{intl d='opensearchserversearch.ai' l="Product configuration"}</h3>
+
+                <form id="products-configuration-form" action="{url path="/admin/module/OpenSearchServerSearch/actions/products"}">
+                    <input type="text" id="config-q" name="search" class="form-control" value="" />
+
+                    <div class="u-padding-top u-padding-bottom">
+                        <button id="config-filter" class="btn btn-success" value="search">{intl l="Search" d="opensearchserversearch.ai"}</button>
+                        <button id="config-show" class="btn btn-success" value="show">{intl l="Show products" d="opensearchserversearch.ai"}</button>
+                    </div>
+
+                    <div id="products-configuration-list"></div>
+
+                </form>
+            </div>
+
         </div>
     </div>
 </div>
+
+
+<script id="tpl-config-row" type="text/html">
+    <% if (data.length > 0) { %>
+    <table class="table table-condensed">
+        <thead>
+        <tr>
+            <th>{intl l="Excluded" d="opensearchserversearch.ai"}</th>
+            <th>{intl l="Keywords" d="opensearchserversearch.ai"}</th>
+            <th>{intl l="Product" d="opensearchserversearch.ai"}</th>
+        </tr>
+        </thead>
+        <% data.forEach(function(row){ %>
+        <tr class="oss-config-row" data-id="<%= row.productId %>" >
+            <td>
+                <input id="disabled_<%= row.productId %>" type="checkbox" name="disabled[]" <% if (row.disabled == "1") { %>checked<% } %> value="1" class="oss-config-disabled" />
+            </td>
+            <td>
+                <input id="keywords_<%= row.productId %>" type="text" name="keywords[]" value="<%= row.keywords %>" class="form-control oss-config-keywords" />
+            </td>
+            <td>
+                <label for="keywords_<%= row.productId %>">[<%= row.productId %>] <%= row.title %></label>
+            </td>
+        </tr>
+        <% }) %>
+    </table>
+    <div id="products-configuration-action" class="hidden u-padding-top u-padding-bottom">
+        <button id="config-save" class="btn btn-primary">{intl l="Save" d="opensearchserversearch.ai"}</button>
+    </div>
+    <% } %>
+</script>
+
+<script id="tpl-config-error" type="text/html">
+    <div class="alert alert-<%= level %>">
+        <%= message %>
+    </div>
+</script>

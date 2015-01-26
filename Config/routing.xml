@@ -7,7 +7,7 @@
     <route id="opensearchserversearch.config.default" path="/admin/module/OpenSearchServerSearch">
         <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::defaultAction</default>
     </route>
-    
+
     <route id="opensearchserver.admin" path="/admin/module/OpenSearchServerSearch/configure" methods="post">
         <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::configureAction</default>
     </route>
@@ -16,8 +16,20 @@
         <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::adminActionsAction</default>
     </route>
 
+    <route id="opensearchserversearch.admin.actions.products.search" path="/admin/module/OpenSearchServerSearch/actions/products/search" methods="get">
+        <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::productsSearchAction</default>
+    </route>
+
+    <route id="opensearchserversearch.admin.actions.products.save" path="/admin/module/OpenSearchServerSearch/actions/products/save" methods="post">
+        <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::productsSaveAction</default>
+    </route>
+
     <route id="opensearchserver.search" path="/search">
         <default key="_controller">OpenSearchServerSearch\Controller\Front\OpenSearchServerSearchFrontController::search</default>
+    </route>
+
+    <route id="opensearchserver.search.autocomplete" path="/search/autocomplete">
+        <default key="_controller">OpenSearchServerSearch\Controller\Front\OpenSearchServerSearchFrontController::autocomplete</default>
     </route>
 
 </routes>

@@ -1,0 +1,106 @@
+{javascripts file='assets/js/libs/underscore-min.js'}
+    <script src="{$asset_url}"></script>
+{/javascripts}
+{literal}
+<script>
+    $(document).ready(function() {
+
+        var $filterTrigger = $('#config-filter'),
+            $showTrigger = $('#config-show'),
+            $saveTrigger = $('#config-save'),
+            $filterInput = $('#config-q'),
+            $form = $('#products-configuration-form'),
+            $productContainer = $('#products-configuration-list'),
+            tplConfigRow = _.template($("#tpl-config-row").html()),
+            tplConfigError = _.template($("#tpl-config-error").html())
+        ;
+
+        var displayRows = function displayRow(data) {
+            $productContainer.html("");
+
+            $productContainer.append(tplConfigRow({data: data.data}));
+        };
+
+        var displayError = function displayError(data) {
+            $productContainer.html("");
+
+            $productContainer.append(tplConfigError(data));
+        };
+
+
+        var searchFn = function searchFn(e) {
+
+            e.preventDefault();
+
+            $('body').append('<div class="modal-backdrop fade in" id="loading-event"><div class="loading"></div></div>');
+
+            $.ajax({
+                url: $form.attr('action') + '/search',
+                type: 'get',
+                data: 'action=' + e.currentTarget.value + '&q=' + $filterInput.val(),
+                dataType: 'json'
+            }).done(function(data){
+                $("#loading-event").remove();
+                if (data.success) {
+                    displayRows(data);
+                } else {
+                    displayError(data);
+                }
+
+                if (data.data.length > 0) {
+                    $('#products-configuration-action').removeClass('hidden');
+                } else {
+                    $('#products-configuration-action').addClass('hidden');
+                }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown){
+                $("#loading-event").remove();
+                displayError({message: textStatus, level: "danger"});
+            });
+        };
+
+        var saveFn = function saveFn(e) {
+
+            e.preventDefault();
+
+            $('body').append('<div class="modal-backdrop fade in" id="loading-event"><div class="loading"></div></div>');
+
+            var data = [];
+
+            $('#products-configuration-list .oss-config-row').each(function(){
+                var $row = $(this);
+                var rowData = {};
+
+                rowData['product'] = $row.data('id');
+                rowData['disabled'] = $row.find('.oss-config-disabled').first().prop('checked') ? 1 : 0;
+                rowData['keywords'] = $row.find('.oss-config-keywords').first().val();
+
+                data.push(rowData);
+            });
+
+            console.log(data);
+            console.log(JSON.stringify(data));
+
+            $.ajax({
+                dataType: "json",
+                type : 'post',
+                url: $form.attr('action') + '/save',
+                contentType: "application/json",
+                data: JSON.stringify(data)
+            }).done(function(data){
+                $("#loading-event").remove();
+                displayError(data);
+            })
+            .fail(function(jqXHR, textStatus, errorThrown){
+                $("#loading-event").remove();
+                displayError({message: textStatus, level: "danger"});
+            });
+        };
+
+        $showTrigger.on("click", searchFn);
+        $filterTrigger.on("click", searchFn);
+        $productContainer.on("click", '#config-save', saveFn);
+
+    });
+</script>
+{/literal}

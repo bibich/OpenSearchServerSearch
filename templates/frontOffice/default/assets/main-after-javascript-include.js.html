@@ -1,0 +1,14 @@
+<script type="text/javascript">
+(function ($) {
+
+    var url = '{url path="/search/autocomplete"}';
+    {literal}
+    $('#q').autocomplete({
+        serviceUrl: url,
+        onSelect: function (suggestion) {
+            alert('You selected: ' + suggestion.value + ', ' + suggestion.data);
+        }
+    });
+    {/literal}
+})(jQuery);
+</script>

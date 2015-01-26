@@ -1,0 +1,26 @@
+<?php
+
+return array(
+    '%nb Item' => '%nb article',
+    '%nb Items' => '%nb articles',
+    'Grid' => 'Grille',
+    'List' => 'Liste',
+    'Minimum 2 characters.' => '2 caractères minimum.',
+    'Name ascending' => 'Ordre alphabétique',
+    'Name descending' => 'Ordre alphabétique inverse',
+    'Next' => 'Suivant',
+    'No results found' => 'Aucun article trouvé',
+    'Pagination' => 'Pagination',
+    'Previous' => 'Précédent',
+    'Price ascending' => 'Prix (du - cher au + cher)',
+    'Price descending' => 'Prix (du + cher au - cher)',
+    'Relevancy' => 'Pertinence',
+    'Search' => 'Rechercher',
+    'Search Result for' => 'Résultats de recherche pour',
+    'Search a product' => 'Rechercher un produit',
+    'Search...' => 'Rechercher...',
+    'Show' => 'Voir',
+    'Sort By' => 'Trier par',
+    'View as' => 'Voir en',
+    'per page' => 'par page',
+);

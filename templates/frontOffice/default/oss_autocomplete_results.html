@@ -1,0 +1,8 @@
+{
+  "query" : "{$keywords|escape:'javascript' nofilter}",
+  "suggestions": [
+  {loop type="product" id="$ids" name="product_list"  limit=$limit page=1 order="given_id"}
+    { "value": "{$TITLE|escape:'javascript' nofilter}", "data": "{$ID}" }{if $LOOP_COUNT != $LOOP_TOTAL},{/if}
+  {/loop}
+  ]
+}

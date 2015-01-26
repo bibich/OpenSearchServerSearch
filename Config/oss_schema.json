@@ -59,6 +59,21 @@
             ]
         },
         {
+          "name": "keywords",
+          "indexed": "YES",
+          "stored": "YES",
+          "analyzer": "TextAnalyzer"
+        },
+        {
+          "name": "keywordsStandard",
+          "indexed": "YES",
+          "stored": "NO",
+          "analyzer": "StandardAnalyzer",
+          "copyOf": [
+            "keywords"
+          ]
+        },
+        {
             "name": "id",
             "indexed": "YES",
             "stored": "NO"

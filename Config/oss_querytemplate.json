@@ -40,6 +40,12 @@
         "mode":"PATTERN",
         "boost":8.0,
         "phraseBoost":8.0
+     },
+     {
+        "field":"keywords",
+        "mode":"PATTERN",
+        "boost":20.0,
+        "phraseBoost":20.0
      }
   ]
 }

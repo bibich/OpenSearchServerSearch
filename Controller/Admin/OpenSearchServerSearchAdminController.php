@@ -23,7 +23,14 @@
 
 namespace OpenSearchServerSearch\Controller\Admin;
 
+use OpenSearchServerSearch\Model\Map\OpensearchserverProductTableMap;
+use OpenSearchServerSearch\Model\OpensearchserverProduct;
+use OpenSearchServerSearch\Model\OpensearchserverProductQuery;
+use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\ActiveQuery\Join;
+use Propel\Runtime\Propel;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Thelia\Core\Translation\Translator;
 use Thelia\Model\Base\ProductQuery;
 use OpenSearchServerSearch\Form\ConfigurationForm;
 use OpenSearchServerSearch\Model\OpensearchserverConfigQuery;
@@ -33,6 +40,11 @@ use Thelia\Controller\Admin\BaseAdminController;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\Resource\AdminResources;
 use Thelia\Form\Exception\FormValidationException;
+use Thelia\Model\Map\ProductI18nTableMap;
+use Thelia\Model\Map\ProductTableMap;
+use Thelia\Model\ProductI18n;
+use Thelia\Model\Tools\ModelCriteriaTools;
+use Thelia\Tools\I18n;
 use Thelia\Tools\URL;
 
 /**
@@ -43,6 +55,9 @@ use Thelia\Tools\URL;
 class OpenSearchServerSearchAdminController extends BaseAdminController
 {
     protected $basePath;
+
+    /** @var Translator $translator */
+    protected $translator;
 
     public function __construct()
     {
@@ -123,12 +138,17 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
             }
             
             //if index has just been created, create its schema
+            /*
             if ($indexCreated) {
                 $this->createSchema($index);
             }
+            */
+            $this->createSchema($index);
+
             
             //check if query template exists, if not, creates it
             $queryTemplate = OpensearchserverConfigQuery::read('query_template');
+            /*
             $request = new \OpenSearchServer\SearchTemplate\Get();
             $request->index($index)
                     ->name($queryTemplate);
@@ -136,6 +156,8 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
             if (!$response->isSuccess()) {
                 $this->createQueryTemplate($index, $queryTemplate);
             }
+            */
+            $this->createQueryTemplate($index, $queryTemplate);
             
             // Log configuration modification
             $this->adminLogAppend(
@@ -153,7 +175,6 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
                 $route = '/admin/modules';
             }
 
-            
             //$this->getRequest()->getSession()->getFlashBag()->add('notice', $this->getTranslator()->trans('Settings have been saved.'));
             $this->getRequest()->getSession()->getFlashBag()->add('oss', $this->getTranslator()->trans('Settings have been saved.', [], OpenSearchServerSearch::MODULE_DOMAIN));
 
@@ -195,7 +216,168 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
             return $this->$method();
         }
     }
-    
+
+    public function productsSearchAction()
+    {
+        $adminAction = $this->getRequest()->query->get('action');
+
+        $responseData = [
+            'success' => false,
+            'data' => [],
+            'message' => $this->trans('Unknown action'),
+            'level' => 'danger'
+        ];
+
+
+        $query = \Thelia\Model\ProductQuery::create();
+        $query->select(['id', 'disabled', 'productId', 'keywords', 'title']);
+
+        ModelCriteriaTools::getI18n(
+            true,
+            null,
+            $query,
+            $this->getSession()->getLang()->getLocale(),
+            ['TITLE'],
+            null,
+            'ID'
+        );
+
+        if ("search" === $adminAction) {
+            $search = '%'.$this->getRequest()->query->get('q').'%';
+            $ossJoin = new Join(
+                ProductTableMap::ID,
+                OpensearchserverProductTableMap::PRODUCT_ID,
+                Criteria::LEFT_JOIN
+            );
+
+            $query
+                ->filterByRef($search)
+                ->_or()
+                ->where(
+                    "`requested_locale_i18n`.`TITLE` " . Criteria::LIKE . " ?",
+                    $search,
+                    \PDO::PARAM_STR
+                )
+            ;
+        } else {
+            $ossJoin = new Join(
+                ProductTableMap::ID,
+                OpensearchserverProductTableMap::PRODUCT_ID,
+                Criteria::INNER_JOIN
+            );
+        }
+
+        $products = $query
+            ->addJoinObject($ossJoin)
+            ->addAsColumn("id", OpensearchserverProductTableMap::ID)
+            ->addAsColumn("disabled", OpensearchserverProductTableMap::DISABLED)
+            ->addAsColumn("productId", ProductTableMap::ID)
+            ->addAsColumn("keywords", OpensearchserverProductTableMap::KEYWORDS)
+            ->addAsColumn("title", 'requested_locale_i18n.Title')
+            ->find()
+            ->toArray()
+        ;
+
+        if (empty($products)) {
+            $responseData["message"] = $this->getTranslator()->trans(
+                'No products found.',
+                [],
+                OpenSearchServerSearch::MODULE_DOMAIN
+            );
+            $responseData["level"] = "info";
+        } else {
+            $responseData['success'] = true;
+            $responseData['data'] = $products;
+        }
+
+        //$con = Propel::getWriteConnection(ProductTableMap::DATABASE_NAME);
+        //$responseData["message"] .= $con->getLastExecutedQuery();
+
+        return $this->jsonResponse(json_encode($responseData));
+    }
+
+    public function productsSaveAction()
+    {
+        $response = $this->checkAuth([AdminResources::MODULE], ['opensearchserversearch'], AccessManager::UPDATE);
+        if (null !== $response) {
+            return $response;
+        }
+
+        $responseData = [
+            'success' => true,
+            'message' => $this->trans('Configuration saved'),
+            'level' => 'success'
+        ];
+
+        $data = $this->getParams();
+
+        try {
+            foreach ($data as $productConfig) {
+
+                $delete = ($productConfig['disabled'] == "0" && trim($productConfig['keywords']) == "" );
+
+                $config = OpensearchserverProductQuery::create()
+                    ->findOneByProductId($productConfig['product']);
+
+                $product = \Thelia\Model\ProductQuery::create()->findPk($productConfig['product']);
+
+                if ($delete) {
+                    if (null !== $config) {
+                        $config->delete();
+                        OpenSearchServerSearchHelper::indexProduct($product);
+                    }
+                    continue;
+                }
+
+                if (null === $config) {
+                    $config = new OpensearchserverProduct();
+                    $config->setProductId($productConfig['product']);
+                }
+                $config
+                    ->setDisabled($productConfig['disabled'])
+                    ->setkeywords($productConfig['keywords'])
+                ;
+
+                // Update index
+                if ($config->isNew() || $config->isModified()) {
+                    $config->save();
+                    if ($config->getDisabled()) {
+                        OpenSearchServerSearchHelper::deleteProduct($product);
+                    } else {
+                        OpenSearchServerSearchHelper::indexProduct($product);
+                    }
+                }
+            }
+
+        } catch (\Exception $ex) {
+            $responseData = [
+                'success' => false,
+                'message' => $ex->getMessage(),
+                'level' => 'danger'
+            ];
+        }
+
+        return $this->jsonResponse(json_encode($responseData));
+    }
+
+    protected function getParams()
+    {
+        $request = $this->getRequest();
+
+        $data = [];
+
+        if (0 === strpos($this->getRequest()->headers->get('Content-Type'), 'application/json')) {
+            $data = json_decode($request->getContent(), true);
+        } else {
+            throw new \RuntimeException(
+                "Wrong request content type. %type provideed. need application/json.",
+                ['%type' => $this->getRequest()->headers->get('Content-Type')]
+            );
+        }
+
+        return $data;
+    }
+
     /**
 	 * Index all products
      */
@@ -312,7 +494,7 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
     protected function renderTemplate()
     {
         $flash = $this->getRequest()->getSession()->getFlashBag()->get('oss');
-        $flashMessage = isset($flash[0]) ? $this->getRequest()->getSession()->getFlashBag()->get('oss')[0] : null;
+        $flashMessage = isset($flash[0]) ? $flash[0] : null;
         return $this->render(
             'module-configure',
             array(
@@ -330,5 +512,14 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
     protected function redirectToHome()
     {
         return RedirectResponse::create(URL::getInstance()->absoluteUrl('/admin/module/OpenSearchServerSearch'));
+    }
+
+    protected function trans($id, $parameters = [])
+    {
+        if (null === $this->translator) {
+            $this->translator = Translator::getInstance();
+        }
+
+        return $this->translator->trans($id, $parameters, OpenSearchServerSearch::MODULE_DOMAIN);
     }
 }

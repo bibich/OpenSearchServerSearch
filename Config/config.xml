@@ -33,13 +33,14 @@
     </services>
     -->
 
-    <!--
     <hooks>
-        <hook id="opensearchserver.hook" class="OpenSearchServer\Hook\MySuperHook" scope="request">
-            <tag name="hook.event_listener" event="main.body.bottom" type="front|back|pdf|email" method="onMainBodyBottom" />
+        <hook id="opensearchserver.hook" class="OpenSearchServerSearch\Hook\FrontHook" scope="request">
+            <tag name="hook.event_listener" event="main.head-bottom" />
+            <tag name="hook.event_listener" event="main.after-javascript-include" />
+            <tag name="hook.event_listener" event="main.javascript-initialization" />
+            <tag name="hook.event_listener" event="main.navbar-secondary" />
         </hook>
     </hooks>
-    -->
 
     <!--
     <exports>
