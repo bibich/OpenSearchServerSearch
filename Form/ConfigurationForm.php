@@ -116,7 +116,7 @@ class ConfigurationForm extends BaseForm
                     )
                 )
             )
-            
+
             ->add(
                 'enable_search',
                 'checkbox',

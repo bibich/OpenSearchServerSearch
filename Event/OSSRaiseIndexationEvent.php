@@ -10,27 +10,17 @@
 /*      file that was distributed with this source code.                             */
 /*************************************************************************************/
 
-namespace OpenSearchServerSearch;
 
-use Propel\Runtime\Connection\ConnectionInterface;
-use Thelia\Install\Database;
-use Thelia\Module\BaseModule;
+namespace OpenSearchServerSearch\Event;
 
-class OpenSearchServerSearch extends BaseModule
+use Thelia\Core\Event\ActionEvent;
+
+/**
+ * Class OSSRaiseIndexationEvent
+ * @package OpenSearchServerSearch\Event
+ * @author Julien Chanséaume <jchanseaume@openstudio.fr>
+ */
+class OSSRaiseIndexationEvent extends ActionEvent
 {
-    /** The module domain for internationalisation */
-    const MODULE_DOMAIN = "opensearchserversearch";
 
-    const CONFIG_LAST_INDEXATION = 'oss_last_indexation';
-
-    public function postActivation(ConnectionInterface $con = null)
-    {
-        $database = new Database($con->getWrappedConnection());
-        $database->insertSql(null, array(__DIR__ . '/Config/thelia.sql'));
-    }
-
-    public static function getBasePath()
-    {
-        return __DIR__;
-    }
 }

@@ -23,32 +23,31 @@
 
 namespace OpenSearchServerSearch\Listener;
 
-use Thelia\Core\Event\File\FileCreateOrUpdateEvent;
-
-use Thelia\Core\Event\Product\ProductUpdateEvent;
-use Thelia\Log\Tlog;
-
-use Thelia\Core\Event\TheliaEvents;
-
-use Thelia\Core\Event\Product\ProductEvent;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use OpenSearchServerSearch\Model\OpensearchserverConfigQuery;
+use DateTime;
+use OpenSearchServerSearch\Event\OSSEvents;
+use OpenSearchServerSearch\Event\OSSExtraDocumentFieldsEvent;
+use OpenSearchServerSearch\Event\OSSIndexDocumentEvent;
+use OpenSearchServerSearch\Event\OSSIndexProductEvent;
+use OpenSearchServerSearch\Event\OSSRaiseIndexationEvent;
 use OpenSearchServerSearch\Helper\OpenSearchServerSearchHelper;
+use OpenSearchServerSearch\OpenSearchServerSearch;
+use Propel\Runtime\ActiveQuery\Criteria;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Thelia\Core\Event\Product\ProductEvent;
+use Thelia\Core\Event\Product\ProductUpdateEvent;
+use Thelia\Core\Event\TheliaEvents;
+use Thelia\Model\ConfigQuery;
+use Thelia\Model\FeatureProductQuery;
+use Thelia\Model\Map\FeatureProductTableMap;
+use Thelia\Model\Map\ProductTableMap;
+use Thelia\Model\Product;
+use Thelia\Model\ProductQuery;
 
 /**
  */
 class OpenSearchServerSearchProductListener implements EventSubscriberInterface
 {
-    public function indexProduct(ProductUpdateEvent $event)
-    {
-        OpenSearchServerSearchHelper::indexProduct($event->getProduct());
-    }
-
-    public function deleteProduct(ProductEvent $event)
-    {
-        OpenSearchServerSearchHelper::deleteProduct($event->getProduct());
-    }
-    
     /**
      * Returns an array of event names this subscriber wants to listen to.
      *
@@ -72,11 +71,109 @@ class OpenSearchServerSearchProductListener implements EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return array(
-            TheliaEvents::PRODUCT_UPDATE => ['indexProduct', 0],
-            TheliaEvents::PRODUCT_CREATE => ['indexProduct', 0],
+            TheliaEvents::PRODUCT_UPDATE => ['productUpdated', 0],
+            TheliaEvents::PRODUCT_CREATE => ['productUpdated', 0],
+            OSSEvents::INDEX_PRODUCT => ['indexProduct', 128],
+            OSSEvents::RAISE_INDEXING => ['raiseIndexation', 128],
             //TheliaEvents::IMAGE_SAVE => ['updateImage', 0],
             //TheliaEvents::PRODUCT_UPDATE_PRODUCT_SALE_ELEMENT=> ['indexProduct', 0],
-            TheliaEvents::AFTER_DELETEPRODUCT => ['deleteProduct', 0]
+            TheliaEvents::AFTER_DELETEPRODUCT => ['productDeleted', 0]
         );
+    }
+
+    public function indexProduct(OSSIndexProductEvent $event)
+    {
+        $this->doIndex($event->getProduct(), $event->getDispatcher());
+    }
+
+    protected function doIndex(Product $product, EventDispatcherInterface $dispatcher)
+    {
+        $fields = [];
+
+        if (!$product->getVisible()) {
+            OpenSearchServerSearchHelper::deleteProduct($product);
+        } else {
+            $event = new OSSExtraDocumentFieldsEvent($product);
+            $dispatcher->dispatch(
+                OSSEvents::REQUEST_EXTRA_DOCUMENT_FIELD,
+                $event
+            );
+            OpenSearchServerSearchHelper::indexProduct($product, $event->getFields());
+        }
+    }
+
+    public function productUpdated(ProductUpdateEvent $event)
+    {
+        $this->doIndex($event->getProduct(), $event->getDispatcher());
+    }
+
+    public function productDeleted(ProductEvent $event)
+    {
+        OpenSearchServerSearchHelper::deleteProduct($event->getProduct());
+    }
+
+    /**
+     * Raise an indexation of product
+     *
+     * @param OSSRaiseIndexationEvent $event
+     * @throws \Propel\Runtime\Exception\PropelException
+     */
+    public function raiseIndexation(OSSRaiseIndexationEvent $event)
+    {
+        $lastIndexation = intval(ConfigQuery::create()->read(OpenSearchServerSearch::CONFIG_LAST_INDEXATION));
+
+        $lastIndexationDate = new DateTime("NOW");
+        if (0 !== $lastIndexation) {
+            $lastIndexationDate->setTimestamp($lastIndexation);
+        } else {
+            $lastIndexationDate->sub(new \DateInterval('P2D'));
+        }
+
+        // find products that have been modified since last indexation.
+        // we have to check related object i18n
+        $allProductsId = [];
+
+        // $product
+        $productIds = ProductQuery::create()
+            ->filterByVisible(1)
+            ->filterByUpdatedAt($lastIndexationDate, Criteria::GREATER_THAN)
+            ->select(ProductTableMap::ID)
+            ->find()
+            ->toArray();
+
+        if (!empty($productIds)) {
+            $allProductsId = array_merge($allProductsId, $productIds);
+        }
+
+        // feature product
+        $productIds = FeatureProductQuery::create()
+            ->useProductQuery()
+            ->filterByVisible(1)
+            ->endUse()
+            ->withColumn('MAX(' . FeatureProductTableMap::UPDATED_AT . ')', 'lastUpdated')
+            ->addAsColumn('id', FeatureProductTableMap::PRODUCT_ID)
+            ->groupBy(FeatureProductTableMap::PRODUCT_ID)
+            ->having('MAX(' . FeatureProductTableMap::UPDATED_AT . ') > ?', $lastIndexationDate)
+            ->select(['id', 'lastUpdated'])
+            ->find()
+            ->toArray();
+
+        if (!empty($productIds)) {
+            $allProductsId = array_merge($allProductsId, array_column($productIds, 'id'));
+        }
+
+        $allProductsId = array_unique($allProductsId);
+
+        if (!empty($allProductsId)) {
+            $products = ProductQuery::create()->findPks($allProductsId);
+
+            foreach ($products as $product) {
+                $this->doIndex($product, $event->getDispatcher());
+            }
+        }
+
+        // update the date of the last manual indexation
+        $now = new \DateTime('NOW');
+        ConfigQuery::create()->write(OpenSearchServerSearch::CONFIG_LAST_INDEXATION, $now->getTimestamp());
     }
 }

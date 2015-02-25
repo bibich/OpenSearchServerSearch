@@ -16,6 +16,10 @@
         <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::adminActionsAction</default>
     </route>
 
+    <route id="opensearchserver.admin.actions.raiseIndexation" path="/admin/module/OpenSearchServerSearch/actions/raiseIndexation">
+        <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::raiseIndexationAction</default>
+    </route>
+
     <route id="opensearchserversearch.admin.actions.products.search" path="/admin/module/OpenSearchServerSearch/actions/products/search" methods="get">
         <default key="_controller">OpenSearchServerSearch\Controller\Admin\OpenSearchServerSearchAdminController::productsSearchAction</default>
     </route>

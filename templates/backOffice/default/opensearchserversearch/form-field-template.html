@@ -13,6 +13,8 @@
             </label>
             {if $type == 'checkbox'}
                  : <input type="checkbox" {if $data == 1}checked="checked"{/if} {if $required}aria-required="true" required{/if} id="{$label_attr.for}" name="{$name}" class="">
+            {elseif $type == 'textarea'}
+                <textarea {if $required}aria-required="true" required{/if} id="{$label_attr.for}" name="{$name}" class="form-control">{$value}</textarea>
             {else}
                 <input type="{$type}" {if $required}aria-required="true" required{/if} placeholder="{$label}" id="{$label_attr.for}" name="{$name}" value="{$value}" class="form-control" />
             {/if}

@@ -26,6 +26,7 @@ namespace OpenSearchServerSearch\Helper;
 use OpenSearchServerSearch\Model\OpensearchserverConfigQuery;
 use OpenSearchServerSearch\Model\OpensearchserverProduct;
 use OpenSearchServerSearch\Model\OpensearchserverProductQuery;
+use Thelia\Log\Tlog;
 use Thelia\Model\Product;
 use Thelia\Model\ProductPriceQuery;
 
@@ -54,9 +55,8 @@ class OpenSearchServerSearchHelper
         return $locale.'_'.$product->getId();
     }
 
-    public static function indexProduct(Product $product)
+    public static function indexProduct(Product $product, array $fields = [])
     {
-
         // Check if the product is visible and activated for indexation
         if (0 === $product->getVisible()) {
             self::deleteProduct($product);
@@ -87,11 +87,12 @@ class OpenSearchServerSearchHelper
         $collSaleElements  = $product->getProductSaleElementss();
         $infos = $collSaleElements->getFirst()->toArray();
         $price  = ProductPriceQuery::create()
-                        ->findOneByProductSaleElementsId($infos['Id'])
-                        ->toArray();
+            ->findOneByProductSaleElementsId($infos['Id'])
+            ->toArray();
 
         //create one document by translation
         $translations = $product->getProductI18ns();
+
         //Prepare request for OSS
         $request = new \OpenSearchServer\Document\Put();
         $request->index($index);
@@ -135,17 +136,39 @@ class OpenSearchServerSearchHelper
                 ->field('price', self::formatPrice($price['Price']))
                 ->field('currency', $price['CurrencyId'])
                 ->field('reference', $product->getRef())
-                ->field('keywords', $keywords)
-            ;
-    
+                ->field('keywords', $keywords);
+
+            // extra fields
+            if (!empty($fields)) {
+                foreach ($fields as $field) {
+                    $document->field(
+                        $field['name'],
+                        $field['value'],
+                        array_key_exists('boost', $field) ? $field['boost'] : null
+                    );
+                }
+            }
+
             $request->addDocument($document);
         }
-        $response = $oss_api->submit($request);
-        
-        return $response->isSuccess();
-        //var_dump($oss_api->getLastRequest());
-        //var_dump($response);
-        //exit;
+
+        $success = false;
+
+        try {
+            $response = $oss_api->submit($request);
+            $success = $response->isSuccess();
+        } catch (\Exception $ex) {
+            Tlog::getInstance()->error(
+                sprintf(
+                    "OSS Indexation [product:%s] : %s",
+                    $product->getId(),
+                    $ex
+                )
+            );
+        }
+
+        return $success;
+
     }
     
     public static function deleteProduct(Product $product)
@@ -161,9 +184,23 @@ class OpenSearchServerSearchHelper
         $request->index($index)
                 ->field('id')
                 ->value($product->getId());
-        $response = $oss_api->submit($request);
 
-        return $response->isSuccess();
+        $success = false;
+
+        try {
+            $response = $oss_api->submit($request);
+            $success = $response->isSuccess();
+        } catch (\Exception $ex) {
+            Tlog::getInstance()->error(
+                sprintf(
+                    "OSS Indexation delete [product:%s] : %s",
+                    $product->getId(),
+                    $ex
+                )
+            );
+        }
+
+        return $success;
     }
     
     public static function formatPrice($price)

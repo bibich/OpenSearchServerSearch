@@ -103,7 +103,7 @@ class OpenSearchServerSearchFrontController extends BaseFrontController
         $results = $this->getProducts($keywords, $locale, $sort, $page, $limit, $offset);
         $ids = explode(',', $results['ids']);
 
-        if (!empty($ids)){
+        if (!empty($ids)) {
             $suggestions = $this->buildQuery($ids, $locale);
             $responseData['suggestions'] = $suggestions;
         }
@@ -129,8 +129,7 @@ class OpenSearchServerSearchFrontController extends BaseFrontController
         $products = $query
             ->filterById($ids)
             ->filterByVisible(1)
-            ->find()
-        ;
+            ->find();
 
         $suggestions = [];
         /** @var Product $product */
@@ -141,6 +140,7 @@ class OpenSearchServerSearchFrontController extends BaseFrontController
                     "id" => $product->getId(),
                     "chapo" => $product->getVirtualColumn('i18n_CHAPO'),
                     "url" => $product->getUrl($locale),
+                    "group" => 'product'
                 ]
             ];
         }
