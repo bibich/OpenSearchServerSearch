@@ -32,8 +32,8 @@
      {  
         "field":"reference",
         "mode":"PATTERN",
-        "boost":1.0,
-        "phraseBoost":1.0
+        "boost":15.0,
+        "phraseBoost":15.0
      },
      {  
         "field":"chapo",
@@ -46,6 +46,12 @@
         "mode":"PATTERN",
         "boost":20.0,
         "phraseBoost":20.0
-     }
+     },
+     {
+        "field":"full",
+        "mode":"PATTERN",
+        "boost":1.0,
+        "phraseBoost":1.0
+    }
   ]
 }
