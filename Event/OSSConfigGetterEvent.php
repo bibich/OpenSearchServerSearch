@@ -14,61 +14,32 @@
 namespace OpenSearchServerSearch\Event;
 
 use Thelia\Core\Event\ActionEvent;
-use Thelia\Model\Product;
 
 /**
- * Class OSSExtraDocumentFieldsEvent
+ * Class OSSConfigGetterEvent
  * @package OpenSearchServerSearch\Event
  * @author Julien Chanséaume <jchanseaume@openstudio.fr>
  */
-class OSSExtraDocumentFieldsEvent extends ActionEvent
+class OSSConfigGetterEvent extends ActionEvent
 {
-    /** @var Product */
-    protected $product;
+    /** @var string */
+    protected $config;
 
-    /** @var array */
-    protected $fields = [];
-
-
-    public function __construct($product)
+    /**
+     * @return string
+     */
+    public function getConfig()
     {
-        $this->product = $product;
+        return $this->config;
     }
 
     /**
-     * @return Product
+     * @param string $config
      */
-    public function getProduct()
+    public function setConfig($config)
     {
-        return $this->product;
-    }
+        $this->config = $config;
 
-    /**
-     * @param Product $product
-     */
-    public function setProduct($product)
-    {
-        $this->product = $product;
-    }
-
-    /**
-     * @return array
-     */
-    public function getFields()
-    {
-        return $this->fields;
-    }
-
-    /**
-     * @return array
-     */
-    public function addFields($name, $value, $boost = null, $locale = null)
-    {
-        $this->fields[] = [
-            'name' => $name,
-            'value' => $value,
-            'boost' => $boost,
-            'locale' => $locale,
-        ];
+        return $this;
     }
 }

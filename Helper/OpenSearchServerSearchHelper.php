@@ -141,11 +141,13 @@ class OpenSearchServerSearchHelper
             // extra fields
             if (!empty($fields)) {
                 foreach ($fields as $field) {
-                    $document->field(
-                        $field['name'],
-                        $field['value'],
-                        array_key_exists('boost', $field) ? $field['boost'] : null
-                    );
+                    if (null === $field['locale'] || $productI18nInfos['Locale'] == $field['locale']) {
+                        $document->field(
+                            $field['name'],
+                            $field['value'],
+                            array_key_exists('boost', $field) ? $field['boost'] : null
+                        );
+                    }
                 }
             }
 

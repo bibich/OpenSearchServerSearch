@@ -23,4 +23,6 @@ class OSSEvents
     const INDEX_PRODUCT = 'action.oss.index-product';
     const RAISE_INDEXING = 'action.oss.raise-indexing';
     const REQUEST_EXTRA_DOCUMENT_FIELD = 'action.oss.request-extra-document-fields';
+    const REQUEST_OSS_QUERY_TEMPLATE = 'action.oss.request-oss-query-template';
+    const REQUEST_OSS_SCHEMA = 'action.oss.request-oss-schema';
 }

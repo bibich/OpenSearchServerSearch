@@ -23,6 +23,7 @@
 
 namespace OpenSearchServerSearch\Controller\Admin;
 
+use OpenSearchServerSearch\Event\OSSConfigGetterEvent;
 use OpenSearchServerSearch\Event\OSSEvents;
 use OpenSearchServerSearch\Event\OSSIndexProductEvent;
 use OpenSearchServerSearch\Event\OSSRaiseIndexationEvent;
@@ -230,10 +231,12 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
         //get handle to work with the API
         $oss_api = OpenSearchServerSearchHelper::getHandler();
 
-        if (is_file($this->getBasePath() . '/Config/oss_analyzer_' . $analyzer . '.json') && is_readable($this->getBasePath() . '/Config/oss_analyzer_' . $analyzer . '.json')) {
+        $configFile = $this->getBasePath() . '/Config/oss_analyzer_' . $analyzer . '.json';
+
+        if (is_file($configFile) && is_readable($configFile)) {
             $request = new \OpenSearchServer\Analyzer\Create(
                 null,
-                file_get_contents($this->getBasePath() . '/Config/oss_analyzer_' . $analyzer . '.json')
+                file_get_contents($configFile)
             );
             $request->index($index)
                 ->name($analyzer);
@@ -262,10 +265,20 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
         //get handle to work with the API
         $oss_api = OpenSearchServerSearchHelper::getHandler();
 
+        $event = new OSSConfigGetterEvent();
+        $this->getDispatcher()->dispatch(
+            OSSEvents::REQUEST_OSS_SCHEMA,
+            $event
+        );
+
+        if (null === $config = $event->getConfig()) {
+            $config = file_get_contents($this->getBasePath() . '/Config/oss_schema.json');
+        }
+
         //create schema
         $request = new \OpenSearchServer\Field\CreateBulk(
             null,
-            file_get_contents($this->getBasePath() . '/Config/oss_schema.json')
+            $config
         );
         $request->index($index);
         $response = $oss_api->submit($request);
@@ -289,9 +302,19 @@ class OpenSearchServerSearchAdminController extends BaseAdminController
         //get handle to work with the API
         $oss_api = OpenSearchServerSearchHelper::getHandler();
 
+        $event = new OSSConfigGetterEvent();
+        $this->getDispatcher()->dispatch(
+            OSSEvents::REQUEST_OSS_QUERY_TEMPLATE,
+            $event
+        );
+
+        if (null === $config = $event->getConfig()) {
+            $config = file_get_contents($this->getBasePath() . '/Config/oss_querytemplate.json');
+        }
+
         $request = new \OpenSearchServer\Search\Field\Put(
             null,
-            file_get_contents($this->getBasePath() . '/Config/oss_querytemplate.json')
+            $config
         );
         $request->index($index)
             ->template($queryTemplate);
